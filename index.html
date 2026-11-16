@@ -1,0 +1,1491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maths Mini-Test Arcade • 10 Marks Edition</title>
+    <style>
+        :root {
+            --bg-dark: #070b14;
+            --bg-panel: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-hover: #26354d;
+            --primary: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.35);
+            --secondary: #06b6d4;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(circle at 15% 20%, rgba(99, 102, 241, 0.12) 0%, transparent 40%),
+                radial-gradient(circle at 85% 80%, rgba(6, 182, 212, 0.12) 0%, transparent 40%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 920px;
+            background: var(--bg-panel);
+            border: 2px solid var(--primary);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 30px var(--primary-glow);
+            position: relative;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1.5rem;
+        }
+
+        .badge-top {
+            display: inline-block;
+            background: rgba(99, 102, 241, 0.2);
+            color: #a5b4fc;
+            border: 1px solid rgba(99, 102, 241, 0.4);
+            padding: 0.3rem 0.9rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 0.75rem;
+        }
+
+        h1 {
+            font-size: clamp(1.5rem, 4vw, 2.2rem);
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 50%, #67e8f9 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .student-entry {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .student-entry label {
+            display: block;
+            color: #cbd5e1;
+            font-weight: 700;
+            margin-bottom: 0.55rem;
+        }
+        .student-entry input {
+            width: 100%;
+            background: #090d16;
+            border: 2px solid var(--primary);
+            border-radius: 9px;
+            color: var(--text-main);
+            padding: 0.8rem 1rem;
+            font-size: 1rem;
+        }
+        .student-entry input:focus {
+            outline: none;
+            border-color: var(--secondary);
+        }
+        .teacher-records {
+            margin-top: 1.5rem;
+            padding: 1.25rem;
+            border: 1px solid var(--warning);
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.95);
+        }
+        .record-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-top: 0.8rem;
+        }
+        .record-card h4 { color: #a5b4fc; margin-bottom: 0.35rem; }
+        .record-answer {
+            color: #cbd5e1;
+            font-size: 0.84rem;
+            padding: 0.35rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .record-correct { color: var(--success); }
+        .record-wrong { color: #fca5a5; }
+
+        /* Dashboard Grid */
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .test-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .test-card:hover:not(.locked) {
+            transform: translateY(-4px);
+            border-color: var(--primary);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+        }
+
+        .test-card.locked {
+            border-color: rgba(16, 185, 129, 0.45);
+            background: rgba(30, 41, 59, 0.7);
+        }
+
+        .topic-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin: 0.85rem 0 1.25rem 0;
+        }
+
+        .pill {
+            font-size: 0.72rem;
+            background: rgba(15, 23, 42, 0.7);
+            color: #cbd5e1;
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            border: 1px solid #334155;
+        }
+
+        .card-meta {
+            font-size: 0.82rem;
+            color: var(--secondary);
+            font-weight: 600;
+            margin-bottom: 0.35rem;
+        }
+
+        .card-title {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .status-text {
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .status-open { color: var(--text-muted); }
+        .status-done { color: var(--success); }
+
+        /* Buttons */
+        .btn {
+            background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%);
+            color: white;
+            border: none;
+            padding: 0.7rem 1.4rem;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn:hover:not(:disabled) {
+            filter: brightness(1.12);
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            background: #334155;
+            color: #64748b;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        /* Quiz View */
+        .hidden { display: none !important; }
+
+        .quiz-top-bar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.75rem;
+            background: var(--bg-card);
+            padding: 0.9rem 1.2rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .progress-track {
+            width: 100%;
+            height: 6px;
+            background: #1e293b;
+            border-radius: 999px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            width: 5%;
+            transition: width 0.3s ease;
+        }
+
+        .q-topic-badge {
+            display: inline-block;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #67e8f9;
+            background: rgba(6, 182, 212, 0.15);
+            padding: 0.25rem 0.65rem;
+            border-radius: 6px;
+            margin-bottom: 0.75rem;
+        }
+
+        .q-mechanic-tag {
+            display: inline-block;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #fcd34d;
+            background: rgba(245, 158, 11, 0.15);
+            padding: 0.25rem 0.65rem;
+            border-radius: 6px;
+            margin-left: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .question-prompt {
+            font-size: 1.2rem;
+            font-weight: 600;
+            line-height: 1.55;
+            margin-bottom: 1.25rem;
+            color: #fff;
+        }
+
+        .visual-box {
+            background: #0b1120;
+            border: 1px solid #1e293b;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Mechanic 1: Codebreaker / Direct Input */
+        .input-wrapper {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .math-input {
+            background: #090d16;
+            border: 2px solid var(--primary);
+            border-radius: 10px;
+            color: #67e8f9;
+            font-size: 1.4rem;
+            font-weight: 700;
+            padding: 0.65rem 1rem;
+            width: 180px;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+        }
+
+        .math-input:focus {
+            outline: none;
+            border-color: var(--secondary);
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.35);
+        }
+
+        .input-hint {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+
+        /* Mechanic 2: True / False Speed Cards */
+        .tf-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .tf-btn {
+            background: var(--bg-card);
+            border: 2px solid var(--border-color);
+            border-radius: 14px;
+            padding: 1.5rem;
+            color: #fff;
+            font-size: 1.15rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tf-btn:hover {
+            border-color: var(--primary);
+            background: var(--bg-card-hover);
+        }
+
+        .tf-btn.selected-true {
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.2);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .tf-btn.selected-false {
+            border-color: var(--danger);
+            background: rgba(239, 68, 68, 0.2);
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
+        }
+
+        /* Mechanic 3: Drag & Drop / Tap-to-Sort Buckets */
+        .sort-arena {
+            margin-bottom: 1.5rem;
+        }
+
+        .token-stage {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1.25rem;
+        }
+
+        .math-token {
+            background: linear-gradient(135deg, #312e81 0%, #1e1b4b 100%);
+            border: 2px dashed #818cf8;
+            color: #e0e7ff;
+            padding: 0.9rem 1.6rem;
+            border-radius: 12px;
+            font-size: 1.15rem;
+            font-weight: 700;
+            cursor: grab;
+            user-select: none;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .math-token:active { cursor: grabbing; }
+
+        .bucket-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+        }
+
+        .bucket-box {
+            background: var(--bg-card);
+            border: 2px dashed #475569;
+            border-radius: 12px;
+            padding: 1.25rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-height: 95px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .bucket-box:hover, .bucket-box.drag-over {
+            border-color: var(--secondary);
+            background: rgba(6, 182, 212, 0.1);
+        }
+
+        .bucket-box.active-bucket {
+            border-style: solid;
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.18);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.25);
+        }
+
+        .bucket-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 0.4rem;
+        }
+
+        .bucket-value {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        /* Mechanic 4: Expression / Tile Assembler */
+        .tile-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.65rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .expr-tile {
+            background: var(--bg-card);
+            border: 2px solid var(--border-color);
+            color: #f8fafc;
+            padding: 0.75rem 1.15rem;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .expr-tile:hover {
+            border-color: var(--secondary);
+            transform: translateY(-2px);
+        }
+
+        .expr-tile.selected {
+            background: rgba(6, 182, 212, 0.22);
+            border-color: var(--secondary);
+            color: #67e8f9;
+        }
+
+        .quiz-footer {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .lock-notice {
+            font-size: 0.8rem;
+            color: var(--warning);
+            font-weight: 600;
+        }
+
+        /* Results Screen */
+        .result-panel {
+            text-align: center;
+            padding: 1.5rem 1rem;
+        }
+
+        .score-circle {
+            background: var(--bg-card);
+            border: 3px solid var(--success);
+            border-radius: 20px;
+            padding: 1.75rem 2.5rem;
+            display: inline-block;
+            margin: 1.5rem 0;
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.2);
+        }
+
+        .big-score {
+            font-size: 3rem;
+            font-weight: 900;
+            color: #fff;
+        }
+
+        .big-score span {
+            font-size: 1.5rem;
+            color: var(--success);
+        }
+
+        /* Teacher Control Bar */
+        .teacher-bar {
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px dashed #334155;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        .teacher-btn {
+            background: transparent;
+            border: 1px solid #475569;
+            color: #94a3b8;
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+
+        .teacher-btn:hover {
+            border-color: var(--warning);
+            color: var(--warning);
+        }
+
+        /* Custom Modal */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.78);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            padding: 1rem;
+        }
+
+        .modal-card {
+            background: var(--bg-panel);
+            border: 2px solid var(--primary);
+            border-radius: 16px;
+            padding: 1.75rem;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+        }
+
+        @media (max-width: 600px) {
+            .container { padding: 1.25rem; }
+            .tf-grid { grid-template-columns: 1fr; }
+            .math-input { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="badge-top">Interactive Assessment Suite • Non-MCQ Edition</div>
+        <h1>MATHS MINI-TEST ARCADE</h1>
+        <p class="subtitle">2 Comprehensive Tests • 20 Questions Each • 0.5 Marks Per Question (10.0 Marks Total)</p>
+    </header>
+
+    <!-- DASHBOARD VIEW -->
+    <div id="dashboard-view">
+        <div class="student-entry">
+            <label for="student-name">Student name</label>
+            <input type="text" id="student-name" maxlength="80" placeholder="Enter your full name" autocomplete="name">
+        </div>
+        <div class="test-grid" id="test-cards-container"></div>
+        <section id="teacher-records" class="teacher-records hidden">
+            <h3 style="color:#fcd34d; margin-bottom:0.35rem;">🔒 Teacher-only student records</h3>
+            <p style="font-size:0.82rem;color:var(--text-muted);">Saved submissions on this browser, including each student's answers.</p>
+            <div id="records-list"></div>
+            <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-top:1rem;">
+                <button class="teacher-btn" onclick="hideTeacherRecords()">Close records</button>
+                <button class="teacher-btn" onclick="resetAttempts()">Reset test attempts</button>
+            </div>
+        </section>
+
+        <div class="teacher-bar">
+            <span>🔒 Single-Attempt Lock Active (Scores saved per browser)</span>
+            <button class="teacher-btn" onclick="openTeacherModal()">🔑 Teacher / Head Reset</button>
+        </div>
+    </div>
+
+    <!-- ACTIVE TEST VIEW -->
+    <div id="quiz-view" class="hidden">
+        <div class="quiz-top-bar">
+            <span id="active-test-name" style="font-weight: 800; color: #a5b4fc;"></span>
+            <span id="question-counter" style="font-size: 0.85rem; font-weight: 700; background: #0f172a; padding: 0.35rem 0.8rem; border-radius: 8px; border: 1px solid #334155;">Question 1 / 20</span>
+        </div>
+
+        <div class="progress-track">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+
+        <div>
+            <span class="q-topic-badge" id="q-topic">Topic</span>
+            <span class="q-mechanic-tag" id="q-mechanic">Challenge Type</span>
+        </div>
+
+        <div class="question-prompt" id="question-prompt"></div>
+
+        <!-- Optional SVG Diagram Container -->
+        <div id="visual-container" class="visual-box hidden"></div>
+
+        <!-- Interactive Answer Zone -->
+        <div id="answer-zone"></div>
+
+        <div class="quiz-footer">
+            <span class="lock-notice">⚠️ Single Attempt Only — Answer carefully before advancing</span>
+            <button class="btn" id="next-btn" onclick="submitAndNext()" disabled>Next Question →</button>
+        </div>
+    </div>
+
+    <!-- RESULT VIEW -->
+    <div id="result-view" class="hidden">
+        <div class="result-panel">
+            <div class="badge-top" style="border-color: var(--success); color: var(--success); background: rgba(16,185,129,0.15);">Assessment Submitted & Locked</div>
+            <h2 id="res-test-title" style="font-size: 1.6rem; margin-top: 0.5rem;"></h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.3rem;">Your score has been recorded on this device.</p>
+
+            <div class="score-circle">
+                <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 0.25rem;">Final Score</div>
+                <div class="big-score" id="res-score">0.0 <span>/ 10.0</span></div>
+                <div id="res-breakdown" style="font-size: 0.85rem; color: #cbd5e1; margin-top: 0.4rem;"></div>
+            </div>
+
+            <div>
+                <button class="btn" onclick="returnToDashboard()">Return to Arcade Menu</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- TEACHER RESET MODAL -->
+<div id="teacher-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+        <h3 style="margin-bottom: 0.5rem; color: #fff;">Teacher / Head Override</h3>
+        <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">Enter Teacher PIN to unlock and reset all test attempts on this device.</p>
+        <input type="password" id="teacher-pin" class="math-input" style="width: 140px; font-size: 1.2rem; margin-bottom: 1rem;" placeholder="PIN" maxlength="4">
+        <div id="pin-error" style="color: var(--danger); font-size: 0.8rem; margin-bottom: 0.75rem;" class="hidden">Incorrect PIN.</div>
+        <div style="display: flex; gap: 0.75rem; justify-content: center;">
+            <button class="teacher-btn" style="padding: 0.6rem 1rem;" onclick="closeTeacherModal()">Cancel</button>
+            <button class="btn btn-success" style="padding: 0.6rem 1.2rem;" onclick="verifyAndReset()">View Records</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    /**
+     * TEST DATA CONFIGURATION
+     * 2 Tests, 20 Questions each, 0.5 marks per question = 10.0 Marks Total
+     * Covers all 9 topics with 4 non-MCQ interactive game types:
+     * - 'input': Direct Codebreaker / Numeric / Exponent Input
+     * - 'tf': True / False Speed Verification
+     * - 'sort': Drag & Drop / Tap-to-Categorize Buckets
+     * - 'tile': Expression / Step Builder Tiles
+     */
+    const TESTS = [
+        {
+            id: "test_1",
+            title: "Test 1: Algebra, Equations & Number Vault",
+            subtitle: "20 Questions • 0.5 Marks Each • Total: 10.0 Marks",
+            topics: [
+                "1. Algebraic Manipulation",
+                "2. Simultaneous Equations",
+                "5. Fractions & Primes",
+                "6. Equations & Inequalities",
+                "8. Algebraic Indices"
+            ],
+            questions: [
+                // 1. Algebraic Manipulation (4 Qs)
+                {
+                    topic: "1. Algebraic Manipulation",
+                    type: "tile",
+                    mechanicLabel: "Expression Builder",
+                    prompt: "Expand and simplify: 3(2x - 4) + 2(x + 5)",
+                    tiles: ["8x - 2", "8x + 2", "6x - 2", "8x - 22"],
+                    answer: "8x - 2"
+                },
+                {
+                    topic: "1. Algebraic Manipulation",
+                    type: "tile",
+                    mechanicLabel: "Factorization Lock",
+                    prompt: "Factorize completely: x² - 9x + 20",
+                    tiles: ["(x - 4)(x - 5)", "(x + 4)(x + 5)", "(x - 2)(x - 10)", "(x - 4)(x + 5)"],
+                    answer: "(x - 4)(x - 5)"
+                },
+                {
+                    topic: "1. Algebraic Manipulation",
+                    type: "tf",
+                    mechanicLabel: "True / False Speed Check",
+                    prompt: "Does (x + 3)² expand to x² + 9?",
+                    answer: "False"
+                },
+                {
+                    topic: "1. Algebraic Manipulation",
+                    type: "input",
+                    mechanicLabel: "Codebreaker Input",
+                    prompt: "If f(x) = 3x² - 2x + 1, calculate the exact numerical value of f(2).",
+                    hint: "Substitute x = 2 into the expression",
+                    answer: "9"
+                },
+
+                // 2. Simultaneous Equations (4 Qs)
+                {
+                    topic: "2. Simultaneous Equations",
+                    type: "input",
+                    mechanicLabel: "Vault Codebreaker",
+                    prompt: "Solve for x:   2x + y = 11   and   x - y = 4",
+                    hint: "Enter integer value for x",
+                    answer: "5"
+                },
+                {
+                    topic: "2. Simultaneous Equations",
+                    type: "input",
+                    mechanicLabel: "Vault Codebreaker",
+                    prompt: "Solve for y:   3x + 2y = 19   and   3x - y = 10",
+                    hint: "Enter integer value for y",
+                    answer: "3"
+                },
+                {
+                    topic: "2. Simultaneous Equations",
+                    type: "sort",
+                    mechanicLabel: "Drag / Tap to Categorize",
+                    prompt: "Classify the system of lines:   y = 2x + 3   and   y = 2x - 5",
+                    token: "Parallel Lines (Same Gradient)",
+                    buckets: ["0 Solutions (No Intersection)", "Infinitely Many Solutions"],
+                    answer: 0
+                },
+                {
+                    topic: "2. Simultaneous Equations",
+                    type: "tf",
+                    mechanicLabel: "True / False Verification",
+                    prompt: "Is (x = 4, y = 1) the valid solution to   x + 3y = 7   and   2x - y = 7?",
+                    answer: "True"
+                },
+
+                // 5. Fractions, Prime Numbers & Basic Operations (4 Qs)
+                {
+                    topic: "5. Fractions & Primes",
+                    type: "tile",
+                    mechanicLabel: "Fraction Forge",
+                    prompt: "Evaluate in simplest form:   2/3 + 3/4",
+                    tiles: ["17/12", "5/7", "6/12", "13/12"],
+                    answer: "17/12"
+                },
+                {
+                    topic: "5. Fractions & Primes",
+                    type: "tile",
+                    mechanicLabel: "Fraction Forge",
+                    prompt: "Evaluate in simplest form:   4/9 ÷ 2/3",
+                    tiles: ["2/3", "8/27", "3/2", "6/12"],
+                    answer: "2/3"
+                },
+                {
+                    topic: "5. Fractions & Primes",
+                    type: "input",
+                    mechanicLabel: "Prime Cipher",
+                    prompt: "Calculate the product of the 2nd prime number and the 4th prime number.",
+                    hint: "Primes start: 2, 3, 5, 7, 11...",
+                    answer: "21"
+                },
+                {
+                    topic: "5. Fractions & Primes",
+                    type: "sort",
+                    mechanicLabel: "Drag / Tap to Categorize",
+                    prompt: "Classify the number 51 into its proper number category:",
+                    token: "51 (51 = 3 × 17)",
+                    buckets: ["Composite Number", "Prime Number"],
+                    answer: 0
+                },
+
+                // 6. Equations & Inequalities (4 Qs)
+                {
+                    topic: "6. Equations & Inequalities",
+                    type: "input",
+                    mechanicLabel: "Equation Solver",
+                    prompt: "Solve for x:   4x - 7 = 2x + 9",
+                    hint: "Enter value of x",
+                    answer: "8"
+                },
+                {
+                    topic: "6. Equations & Inequalities",
+                    type: "input",
+                    mechanicLabel: "Inequality Boundary",
+                    prompt: "What is the largest integer value of x that satisfies:   3x + 2 < 17 ?",
+                    hint: "First solve 3x < 15",
+                    answer: "4"
+                },
+                {
+                    topic: "6. Equations & Inequalities",
+                    type: "tf",
+                    mechanicLabel: "Inequality Rule Check",
+                    prompt: "When solving -2x > 10, dividing both sides by -2 gives x > -5.",
+                    answer: "False"
+                },
+                {
+                    topic: "6. Equations & Inequalities",
+                    type: "tile",
+                    mechanicLabel: "Interval Selector",
+                    prompt: "Solve the compound inequality:   -3 ≤ 2x - 1 < 7",
+                    tiles: ["-1 ≤ x < 4", "-2 ≤ x < 3", "-1 < x ≤ 4", "1 ≤ x < 4"],
+                    answer: "-1 ≤ x < 4"
+                },
+
+                // 8. Algebraic Indices (4 Qs)
+                {
+                    topic: "8. Algebraic Indices",
+                    type: "input",
+                    mechanicLabel: "Exponent Filler",
+                    prompt: "Find the missing power n:   (x⁴ × x⁵) ÷ x² = xⁿ",
+                    hint: "Enter integer value for n",
+                    answer: "7"
+                },
+                {
+                    topic: "8. Algebraic Indices",
+                    type: "tile",
+                    mechanicLabel: "Power Simplifier",
+                    prompt: "Simplify completely:   (3x²y³)²",
+                    tiles: ["9x⁴y⁶", "6x⁴y⁵", "9x⁴y⁵", "3x⁴y⁶"],
+                    answer: "9x⁴y⁶"
+                },
+                {
+                    topic: "8. Algebraic Indices",
+                    type: "input",
+                    mechanicLabel: "Negative/Zero Index",
+                    prompt: "Evaluate the exact numerical value of:   5⁰ + 2⁻²",
+                    hint: "Enter decimal (e.g. 1.25)",
+                    answer: "1.25"
+                },
+                {
+                    topic: "8. Algebraic Indices",
+                    type: "sort",
+                    mechanicLabel: "Drag / Tap to Categorize",
+                    prompt: "Match the fractional index   x^(1/2)   to its equivalent radical form:",
+                    token: "x^(1/2)",
+                    buckets: ["√x (Square Root)", "1 / x² (Reciprocal Square)"],
+                    answer: 0
+                }
+            ]
+        },
+        {
+            id: "test_2",
+            title: "Test 2: Geometry, Surds & Data Lab",
+            subtitle: "20 Questions • 0.5 Marks Each • Total: 10.0 Marks",
+            topics: [
+                "3. Trigonometry",
+                "4. Mensuration (Perimeter, Area, Volume)",
+                "7. Collecting Data (Scatter & Histogram)",
+                "9. Surds"
+            ],
+            questions: [
+                // 3. Trigonometry (5 Qs)
+                {
+                    topic: "3. Trigonometry",
+                    type: "tile",
+                    mechanicLabel: "Ratio Matcher",
+                    prompt: "In a right-angled triangle, which trigonometric ratio equals Opposite ÷ Hypotenuse?",
+                    tiles: ["sin(θ)", "cos(θ)", "tan(θ)", "1 / tan(θ)"],
+                    answer: "sin(θ)"
+                },
+                {
+                    topic: "3. Trigonometry",
+                    type: "input",
+                    mechanicLabel: "Triangle Codebreaker",
+                    prompt: "A right triangle has Opposite = 6 cm and Adjacent = 8 cm. Find the Hypotenuse (cm).",
+                    svg: `<svg width="220" height="120" viewBox="0 0 220 120">
+                            <polygon points="30,95 170,95 170,25" fill="rgba(99,102,241,0.18)" stroke="#818cf8" stroke-width="2.5"/>
+                            <rect x="158" y="83" width="12" height="12" fill="none" stroke="#67e8f9" stroke-width="1.5"/>
+                            <text x="90" y="112" fill="#cbd5e1" font-size="12">Adj = 8 cm</text>
+                            <text x="176" y="65" fill="#cbd5e1" font-size="12">Opp = 6</text>
+                            <text x="72" y="52" fill="#fcd34d" font-size="12" font-weight="bold">Hyp = ?</text>
+                          </svg>`,
+                    hint: "Use Pythagoras: a² + b² = c²",
+                    answer: "10"
+                },
+                {
+                    topic: "3. Trigonometry",
+                    type: "input",
+                    mechanicLabel: "Exact Trig Value",
+                    prompt: "If tan(θ) = 1 and θ is an acute angle, enter the angle θ in degrees.",
+                    hint: "Enter number only (e.g. 30)",
+                    answer: "45"
+                },
+                {
+                    topic: "3. Trigonometry",
+                    type: "tf",
+                    mechanicLabel: "Trig Identity Check",
+                    prompt: "Is the exact value of sin(30°) equal to 0.5?",
+                    answer: "True"
+                },
+                {
+                    topic: "3. Trigonometry",
+                    type: "input",
+                    mechanicLabel: "Elevation Solver",
+                    prompt: "Given cos(60°) = 0.5, find side x if Hypotenuse = 14 cm.",
+                    svg: `<svg width="220" height="120" viewBox="0 0 220 120">
+                            <polygon points="30,95 170,95 170,25" fill="rgba(6,182,212,0.15)" stroke="#22d3ee" stroke-width="2.5"/>
+                            <text x="48" y="88" fill="#fcd34d" font-size="11">60°</text>
+                            <text x="90" y="112" fill="#67e8f9" font-size="12" font-weight="bold">x = ?</text>
+                            <text x="68" y="50" fill="#cbd5e1" font-size="12">14 cm</text>
+                          </svg>`,
+                    hint: "Adjacent = Hypotenuse × cos(60°)",
+                    answer: "7"
+                },
+
+                // 4. Mensuration: Perimeter, Area, Volume (5 Qs)
+                {
+                    topic: "4. Mensuration",
+                    type: "input",
+                    mechanicLabel: "Perimeter Calculator",
+                    prompt: "Find the total perimeter (in cm) of a rectangle with length 11 cm and width 6 cm.",
+                    hint: "P = 2(l + w)",
+                    answer: "34"
+                },
+                {
+                    topic: "4. Mensuration",
+                    type: "input",
+                    mechanicLabel: "Trapezium Area",
+                    prompt: "Calculate the area (cm²) of a trapezium with parallel sides 7 cm and 13 cm, and height 5 cm.",
+                    svg: `<svg width="230" height="110" viewBox="0 0 230 110">
+                            <polygon points="65,25 165,25 195,85 35,85" fill="rgba(16,185,129,0.18)" stroke="#10b981" stroke-width="2.5"/>
+                            <line x1="65" y1="25" x2="65" y2="85" stroke="#fcd34d" stroke-dasharray="4" stroke-width="1.5"/>
+                            <text x="98" y="18" fill="#cbd5e1" font-size="12">7 cm</text>
+                            <text x="95" y="102" fill="#cbd5e1" font-size="12">13 cm</text>
+                            <text x="70" y="60" fill="#fcd34d" font-size="11">h = 5</text>
+                          </svg>`,
+                    hint: "Area = ½(a + b) × h",
+                    answer: "50"
+                },
+                {
+                    topic: "4. Mensuration",
+                    type: "input",
+                    mechanicLabel: "Volume Vault",
+                    prompt: "Find the volume (cm³) of a cuboid measuring 5 cm × 4 cm × 6 cm.",
+                    hint: "V = l × w × h",
+                    answer: "120"
+                },
+                {
+                    topic: "4. Mensuration",
+                    type: "tile",
+                    mechanicLabel: "Circle Formula Match",
+                    prompt: "A circle has radius r = 7 cm. What is its exact area in terms of π?",
+                    tiles: ["49π cm²", "14π cm²", "7π cm²", "28π cm²"],
+                    answer: "49π cm²"
+                },
+                {
+                    topic: "4. Mensuration",
+                    type: "tf",
+                    mechanicLabel: "3D Geometry Check",
+                    prompt: "The volume of a cylinder is calculated using the formula V = πr²h.",
+                    answer: "True"
+                },
+
+                // 7. Collecting Data: Scatter Diagram & Histogram (5 Qs)
+                {
+                    topic: "7. Collecting Data",
+                    type: "sort",
+                    mechanicLabel: "Scatter Correlation Sort",
+                    prompt: "Look at the scatter diagram trend below. Classify its correlation:",
+                    svg: `<svg width="200" height="120" viewBox="0 0 200 120">
+                            <line x1="25" y1="15" x2="25" y2="100" stroke="#94a3b8" stroke-width="2"/>
+                            <line x1="25" y1="100" x2="180" y2="100" stroke="#94a3b8" stroke-width="2"/>
+                            <circle cx="40" cy="30" r="4" fill="#22d3ee"/>
+                            <circle cx="65" cy="42" r="4" fill="#22d3ee"/>
+                            <circle cx="95" cy="58" r="4" fill="#22d3ee"/>
+                            <circle cx="125" cy="74" r="4" fill="#22d3ee"/>
+                            <circle cx="155" cy="88" r="4" fill="#22d3ee"/>
+                          </svg>`,
+                    token: "Downward Trend (As X increases, Y decreases)",
+                    buckets: ["Negative Correlation", "Positive Correlation"],
+                    answer: 0
+                },
+                {
+                    topic: "7. Collecting Data",
+                    type: "tile",
+                    mechanicLabel: "Histogram Principle",
+                    prompt: "In a histogram with unequal class widths, what does the AREA of each bar represent?",
+                    tiles: ["Frequency", "Frequency Density", "Cumulative Frequency", "Class Midpoint"],
+                    answer: "Frequency"
+                },
+                {
+                    topic: "7. Collecting Data",
+                    type: "input",
+                    mechanicLabel: "Frequency Density Calc",
+                    prompt: "A class interval has Frequency = 24 and Class Width = 6. Calculate the Frequency Density.",
+                    hint: "Frequency Density = Frequency ÷ Class Width",
+                    answer: "4"
+                },
+                {
+                    topic: "7. Collecting Data",
+                    type: "tf",
+                    mechanicLabel: "Data Graph Check",
+                    prompt: "Unlike a standard bar chart, a histogram has NO gaps between adjacent bars for continuous data.",
+                    answer: "True"
+                },
+                {
+                    topic: "7. Collecting Data",
+                    type: "sort",
+                    mechanicLabel: "Data Type Categorizer",
+                    prompt: "Classify the variable: 'Height of students measured in centimetres'",
+                    token: "Student Height (cm)",
+                    buckets: ["Continuous Data", "Discrete Data"],
+                    answer: 0
+                },
+
+                // 9. Surds (5 Qs)
+                {
+                    topic: "9. Surds",
+                    type: "tile",
+                    mechanicLabel: "Surd Simplifier",
+                    prompt: "Simplify   √72   into its simplest surd form:",
+                    tiles: ["6√2", "2√6", "8√3", "9√2"],
+                    answer: "6√2"
+                },
+                {
+                    topic: "9. Surds",
+                    type: "tile",
+                    mechanicLabel: "Surd Arithmetic",
+                    prompt: "Simplify:   4√3 + √27",
+                    tiles: ["7√3", "5√30", "13√3", "5√3"],
+                    answer: "7√3"
+                },
+                {
+                    topic: "9. Surds",
+                    type: "input",
+                    mechanicLabel: "Difference of Squares",
+                    prompt: "Expand and calculate the exact integer value of:   (3 + √5)(3 - √5)",
+                    hint: "Use (a + b)(a - b) = a² - b²",
+                    answer: "4"
+                },
+                {
+                    topic: "9. Surds",
+                    type: "tile",
+                    mechanicLabel: "Rationalize Denominator",
+                    prompt: "Rationalize the denominator and simplify:   10 / √5",
+                    tiles: ["2√5", "5√2", "10√5", "√5 / 2"],
+                    answer: "2√5"
+                },
+                {
+                    topic: "9. Surds",
+                    type: "tf",
+                    mechanicLabel: "Irrationality Check",
+                    prompt: "Is   √49 + √16   an irrational surd?",
+                    answer: "False"
+                }
+            ]
+        }
+    ];
+
+    // State Management
+    const STORAGE_KEY = "maths_arcade_10m_v1";
+    const RECORDS_KEY = "maths_arcade_student_records_v1";
+    let currentStudentName = "";
+    let currentAnswers = [];
+    let currentTestIdx = null;
+    let currentQIdx = 0;
+    let userSelection = null;
+    let score = 0;
+
+    function loadResults() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            return raw ? JSON.parse(raw) : {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function loadStudentRecords() {
+        try {
+            return JSON.parse(localStorage.getItem(RECORDS_KEY) || "[]");
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function saveResult(testId, finalScore, studentName, answers, testTitle) {
+        const results = loadResults();
+        const timestamp = new Date().toLocaleString();
+        results[testId] = { score: finalScore, timestamp };
+        const records = loadStudentRecords();
+        records.push({
+            studentName,
+            testId,
+            testTitle,
+            score: finalScore,
+            timestamp,
+            answers
+        });
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(results));
+            localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
+        } catch (e) {
+            alert("This browser could not save the result. Check available browser storage.");
+        }
+    }
+
+    function renderDashboard() {
+        const results = loadResults();
+        const container = document.getElementById("test-cards-container");
+        container.innerHTML = "";
+
+        TESTS.forEach((test, index) => {
+            const record = results[test.id];
+            const isLocked = record !== undefined;
+
+            const card = document.createElement("div");
+            card.className = `test-card ${isLocked ? "locked" : ""}`;
+
+            const pillsHTML = test.topics.map(t => `<span class="pill">${t}</span>`).join("");
+
+            card.innerHTML = `
+                <div>
+                    <div class="card-meta">${test.subtitle}</div>
+                    <div class="card-title">${test.title}</div>
+                    <div class="topic-pills">${pillsHTML}</div>
+                </div>
+                <div class="card-footer">
+                    <span class="status-text ${isLocked ? "status-done" : "status-open"}">
+                        ${isLocked ? `✓ Score: ${record.score.toFixed(1)} / 10.0` : "Status: Ready (1 Attempt)"}
+                    </span>
+                    <button class="btn" onclick="startTest(${index})" ${isLocked ? "disabled" : ""}>
+                        ${isLocked ? "Locked" : "Launch Test →"}
+                    </button>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    function startTest(index) {
+        const results = loadResults();
+        const test = TESTS[index];
+        const enteredName = document.getElementById("student-name").value.trim();
+        if (!enteredName) {
+            alert("Please enter the student's name before starting a test.");
+            document.getElementById("student-name").focus();
+            return;
+        }
+        if (results[test.id] !== undefined) return;
+
+        currentStudentName = enteredName;
+        currentAnswers = [];
+        currentTestIdx = index;
+        currentQIdx = 0;
+        userSelection = null;
+        score = 0;
+
+        document.getElementById("dashboard-view").classList.add("hidden");
+        document.getElementById("result-view").classList.add("hidden");
+        document.getElementById("quiz-view").classList.remove("hidden");
+
+        renderQuestion();
+    }
+
+    function renderQuestion() {
+        const test = TESTS[currentTestIdx];
+        const q = test.questions[currentQIdx];
+
+        document.getElementById("active-test-name").textContent = test.title;
+        document.getElementById("question-counter").textContent = `Question ${currentQIdx + 1} / ${test.questions.length}`;
+        document.getElementById("progress-fill").style.width = `${((currentQIdx + 1) / test.questions.length) * 100}%`;
+
+        document.getElementById("q-topic").textContent = q.topic;
+        document.getElementById("q-mechanic").textContent = q.mechanicLabel;
+        document.getElementById("question-prompt").textContent = q.prompt;
+
+        // Visual SVG Diagram if present
+        const visualBox = document.getElementById("visual-container");
+        if (q.svg) {
+            visualBox.innerHTML = q.svg;
+            visualBox.classList.remove("hidden");
+        } else {
+            visualBox.innerHTML = "";
+            visualBox.classList.add("hidden");
+        }
+
+        const zone = document.getElementById("answer-zone");
+        zone.innerHTML = "";
+        userSelection = null;
+
+        const nextBtn = document.getElementById("next-btn");
+        nextBtn.disabled = true;
+        nextBtn.textContent = (currentQIdx + 1 === test.questions.length) ? "Submit Final Test ✓" : "Next Question →";
+
+        if (q.type === "input") {
+            zone.innerHTML = `
+                <div class="input-wrapper">
+                    <label style="font-weight:700; color:#cbd5e1;">Your Answer:</label>
+                    <input type="text" id="direct-input" class="math-input" placeholder="?" autocomplete="off">
+                    <span class="input-hint">💡 ${q.hint || "Enter exact value"}</span>
+                </div>
+            `;
+            const inp = document.getElementById("direct-input");
+            inp.addEventListener("input", (e) => {
+                userSelection = e.target.value.trim();
+                nextBtn.disabled = (userSelection === "");
+            });
+            inp.addEventListener("keydown", (e) => {
+                if (e.key === "Enter" && userSelection !== "") submitAndNext();
+            });
+            setTimeout(() => inp.focus(), 60);
+
+        } else if (q.type === "tf") {
+            zone.innerHTML = `
+                <div class="tf-grid">
+                    <button type="button" class="tf-btn" id="btn-true" onclick="pickTF('True')">
+                        <span style="font-size:1.5rem; color:var(--success);">✔</span>
+                        <span>TRUE</span>
+                    </button>
+                    <button type="button" class="tf-btn" id="btn-false" onclick="pickTF('False')">
+                        <span style="font-size:1.5rem; color:var(--danger);">✘</span>
+                        <span>FALSE</span>
+                    </button>
+                </div>
+            `;
+
+        } else if (q.type === "sort") {
+            zone.innerHTML = `
+                <div class="sort-arena">
+                    <div class="token-stage">
+                        <div class="math-token" draggable="true" id="drag-token">${q.token}</div>
+                    </div>
+                    <p style="text-align:center; font-size:0.78rem; color:var(--text-muted); margin-bottom:0.85rem;">
+                        Drag the card into the correct category bucket (or tap a bucket directly):
+                    </p>
+                    <div class="bucket-grid">
+                        <div class="bucket-box" id="bucket-0" onclick="pickBucket(0)">
+                            <div class="bucket-label">Category A</div>
+                            <div class="bucket-value">${q.buckets[0]}</div>
+                        </div>
+                        <div class="bucket-box" id="bucket-1" onclick="pickBucket(1)">
+                            <div class="bucket-label">Category B</div>
+                            <div class="bucket-value">${q.buckets[1]}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const token = document.getElementById("drag-token");
+            token.addEventListener("dragstart", (e) => {
+                e.dataTransfer.setData("text/plain", "token");
+            });
+
+            [0, 1].forEach(idx => {
+                const b = document.getElementById(`bucket-${idx}`);
+                b.addEventListener("dragover", (e) => {
+                    e.preventDefault();
+                    b.classList.add("drag-over");
+                });
+                b.addEventListener("dragleave", () => b.classList.remove("drag-over"));
+                b.addEventListener("drop", (e) => {
+                    e.preventDefault();
+                    b.classList.remove("drag-over");
+                    pickBucket(idx);
+                });
+            });
+
+        } else if (q.type === "tile") {
+            const bank = document.createElement("div");
+            bank.className = "tile-bank";
+            q.tiles.forEach((tileText) => {
+                const btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = "expr-tile";
+                btn.textContent = tileText;
+                btn.onclick = () => {
+                    document.querySelectorAll(".expr-tile").forEach(el => el.classList.remove("selected"));
+                    btn.classList.add("selected");
+                    userSelection = tileText;
+                    nextBtn.disabled = false;
+                };
+                bank.appendChild(btn);
+            });
+            zone.appendChild(bank);
+        }
+    }
+
+    function pickTF(val) {
+        userSelection = val;
+        document.getElementById("btn-true").className = "tf-btn" + (val === "True" ? " selected-true" : "");
+        document.getElementById("btn-false").className = "tf-btn" + (val === "False" ? " selected-false" : "");
+        document.getElementById("next-btn").disabled = false;
+    }
+
+    function pickBucket(idx) {
+        userSelection = idx;
+        document.getElementById("bucket-0").classList.toggle("active-bucket", idx === 0);
+        document.getElementById("bucket-1").classList.toggle("active-bucket", idx === 1);
+        document.getElementById("next-btn").disabled = false;
+    }
+
+    function normalizeAnswer(val) {
+        return String(val).replace(/\s+/g, "").toLowerCase();
+    }
+
+    function submitAndNext() {
+        if (userSelection === null || userSelection === "") return;
+
+        const test = TESTS[currentTestIdx];
+        const q = test.questions[currentQIdx];
+
+        let isCorrect = false;
+        if (q.type === "sort") {
+            isCorrect = (Number(userSelection) === q.answer);
+        } else if (q.type === "input") {
+            // Compare numerical values if both parse as numbers (handles 1.25 vs 1.250)
+            const numUser = parseFloat(userSelection);
+            const numAns = parseFloat(q.answer);
+            if (!isNaN(numUser) && !isNaN(numAns) && String(userSelection).match(/^-?\d+(\.\d+)?$/)) {
+                isCorrect = Math.abs(numUser - numAns) < 1e-6;
+            } else {
+                isCorrect = normalizeAnswer(userSelection) === normalizeAnswer(q.answer);
+            }
+        } else {
+            isCorrect = normalizeAnswer(userSelection) === normalizeAnswer(q.answer);
+        }
+
+        currentAnswers.push({
+            questionNumber: currentQIdx + 1,
+            topic: q.topic,
+            question: q.prompt,
+            studentResponse: String(userSelection),
+            correctAnswer: String(q.answer),
+            isCorrect
+        });
+
+        if (isCorrect) {
+            score += 0.5;
+        }
+
+        if (currentQIdx + 1 < test.questions.length) {
+            currentQIdx++;
+            renderQuestion();
+        } else {
+            finishTest();
+        }
+    }
+
+    function finishTest() {
+        const test = TESTS[currentTestIdx];
+        saveResult(test.id, score, currentStudentName, currentAnswers, test.title);
+
+        document.getElementById("quiz-view").classList.add("hidden");
+        document.getElementById("result-view").classList.remove("hidden");
+
+        document.getElementById("res-test-title").textContent = test.title;
+        document.getElementById("res-score").innerHTML = `${score.toFixed(1)} <span>/ 10.0</span>`;
+        const correctCount = Math.round(score / 0.5);
+        document.getElementById("res-breakdown").textContent = `${correctCount} out of 20 questions correct (0.5 marks each)`;
+    }
+
+    function returnToDashboard() {
+        document.getElementById("result-view").classList.add("hidden");
+        document.getElementById("quiz-view").classList.add("hidden");
+        document.getElementById("dashboard-view").classList.remove("hidden");
+        renderDashboard();
+    }
+
+    // Teacher Reset Modal Controls
+    function openTeacherModal() {
+        document.getElementById("teacher-pin").value = "";
+        document.getElementById("pin-error").classList.add("hidden");
+        document.getElementById("teacher-modal").classList.remove("hidden");
+    }
+
+    function closeTeacherModal() {
+        document.getElementById("teacher-modal").classList.add("hidden");
+    }
+
+    function verifyAndReset() {
+        const pin = document.getElementById("teacher-pin").value;
+        if (pin === "1234") {
+            closeTeacherModal();
+            renderTeacherRecords();
+            document.getElementById("teacher-records").classList.remove("hidden");
+            document.getElementById("teacher-records").scrollIntoView({ behavior: "smooth" });
+        } else {
+            document.getElementById("pin-error").classList.remove("hidden");
+        }
+    }
+
+    function renderTeacherRecords() {
+        const records = loadStudentRecords();
+        const container = document.getElementById("records-list");
+        if (!records.length) {
+            container.innerHTML = '<p style="margin-top:1rem;color:var(--text-muted);">No student submissions have been recorded yet.</p>';
+            return;
+        }
+        container.innerHTML = records.slice().reverse().map(record => {
+            const answerRows = (record.answers || []).map(a => `
+                <div class="record-answer">
+                    <strong>Q${a.questionNumber} · ${a.topic}</strong><br>
+                    ${escapeHTML(a.question)}<br>
+                    Student response: <strong>${escapeHTML(a.studentResponse)}</strong><br>
+                    Correct answer: ${escapeHTML(a.correctAnswer)}
+                    <span class="${a.isCorrect ? "record-correct" : "record-wrong"}">
+                        ${a.isCorrect ? " ✓ Correct" : " ✗ Incorrect"}
+                    </span>
+                </div>
+            `).join("");
+            return `
+                <article class="record-card">
+                    <h4>${escapeHTML(record.studentName)} — ${escapeHTML(record.testTitle)}</h4>
+                    <p style="font-size:0.82rem;color:var(--text-muted);">
+                        Score: ${Number(record.score).toFixed(1)} / 10 · ${escapeHTML(record.timestamp)}
+                    </p>
+                    <details style="margin-top:0.7rem;">
+                        <summary style="cursor:pointer;color:#67e8f9;">View all student responses</summary>
+                        <div style="margin-top:0.6rem;">${answerRows}</div>
+                    </details>
+                </article>
+            `;
+        }).join("");
+    }
+
+    function escapeHTML(value) {
+        return String(value).replace(/[&<>"']/g, char => ({
+            "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+        }[char]));
+    }
+
+    function hideTeacherRecords() {
+        document.getElementById("teacher-records").classList.add("hidden");
+    }
+
+    function resetAttempts() {
+        if (!confirm("Reset the single-attempt locks for this browser? Saved student records will be kept.")) return;
+        localStorage.removeItem(STORAGE_KEY);
+        renderDashboard();
+        renderTeacherRecords();
+        alert("Test attempts have been reset. Existing student records are still saved.");
+    }
+
+    // Boot
+    window.onload = renderDashboard;
+</script>
+</body>
+</html>
