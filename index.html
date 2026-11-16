@@ -621,9 +621,13 @@
             <p style="font-size:0.82rem;color:var(--text-muted);">Saved submissions on this browser, including each student's answers.</p>
             <div id="records-list"></div>
             <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-top:1rem;">
+                <button class="teacher-btn" onclick="exportAllRecords()">Download all records (CSV)</button>
+                <button class="teacher-btn" onclick="document.getElementById('record-import').click()">Import student response files</button>
+                <input id="record-import" type="file" accept=".json,application/json" multiple style="display:none" onchange="importStudentRecords(event)">
                 <button class="teacher-btn" onclick="hideTeacherRecords()">Close records</button>
                 <button class="teacher-btn" onclick="resetAttempts()">Reset test attempts</button>
             </div>
+            <p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.8rem;">Students must download their response file after finishing and send it to you. Import those files here to collect them on your device.</p>
         </section>
 
         <div class="teacher-bar">
@@ -667,7 +671,8 @@
         <div class="result-panel">
             <div class="badge-top" style="border-color: var(--success); color: var(--success); background: rgba(16,185,129,0.15);">Assessment Submitted & Locked</div>
             <h2 id="res-test-title" style="font-size: 1.6rem; margin-top: 0.5rem;"></h2>
-            <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.3rem;">Your score has been recorded on this device.</p>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.3rem;">Your assessment has been submitted.</p>
+            <p id="submission-status" role="status" style="color: var(--success); font-size: 0.9rem; margin-top: 0.5rem;"></p>
 
             <div class="score-circle">
                 <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 0.25rem;">Final Score</div>
@@ -675,7 +680,8 @@
                 <div id="res-breakdown" style="font-size: 0.85rem; color: #cbd5e1; margin-top: 0.4rem;"></div>
             </div>
 
-            <div>
+            <div style="display:flex;gap:0.75rem;flex-wrap:wrap;justify-content:center;">
+                <!-- <button class="btn" id="download-response-btn" onclick="downloadCurrentSubmission()">Download my response file</button> -->
                 <button class="btn" onclick="returnToDashboard()">Return to Arcade Menu</button>
             </div>
         </div>
@@ -1102,12 +1108,15 @@
     // State Management
     const STORAGE_KEY = "maths_arcade_10m_v1";
     const RECORDS_KEY = "maths_arcade_student_records_v1";
+    // Paste your deployed Google Apps Script Web App URL between the quotes below.
+    const GOOGLE_SCRIPT_URL = "PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
     let currentStudentName = "";
     let currentAnswers = [];
     let currentTestIdx = null;
     let currentQIdx = 0;
     let userSelection = null;
     let score = 0;
+    let latestSubmissionRecord = null;
 
     function loadResults() {
         try {
@@ -1126,24 +1135,40 @@
         }
     }
 
-    function saveResult(testId, finalScore, studentName, answers, testTitle) {
+    async function saveResult(testId, finalScore, studentName, answers, testTitle) {
         const results = loadResults();
-        const timestamp = new Date().toLocaleString();
+        const timestamp = new Date().toISOString();
         results[testId] = { score: finalScore, timestamp };
-        const records = loadStudentRecords();
-        records.push({
-            studentName,
-            testId,
-            testTitle,
-            score: finalScore,
-            timestamp,
-            answers
-        });
+        const record = { submissionId: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`, studentName, testId, testTitle, score: finalScore, timestamp, answers };
+        latestSubmissionRecord = record;
+
+        // Keep a local copy as a backup on this student's browser.
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(results));
+            const records = loadStudentRecords();
+            records.push(record);
             localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
         } catch (e) {
-            alert("This browser could not save the result. Check available browser storage.");
+            console.warn("Could not save the local backup:", e);
+        }
+
+        if (!GOOGLE_SCRIPT_URL.startsWith("https://script.google.com/macros/s/")) {
+            return { sent: false, reason: "not-configured" };
+        }
+
+        try {
+            // text/plain + no-cors allows the browser to send the submission to Apps Script.
+            // The response is opaque, so this confirms dispatch, not database receipt.
+            await fetch(GOOGLE_SCRIPT_URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify(record)
+            });
+            return { sent: true };
+        } catch (error) {
+            console.error("Google Sheets submission failed:", error);
+            return { sent: false, reason: "network-error" };
         }
     }
 
@@ -1389,9 +1414,14 @@
         }
     }
 
-    function finishTest() {
+    async function finishTest() {
         const test = TESTS[currentTestIdx];
-        saveResult(test.id, score, currentStudentName, currentAnswers, test.title);
+        const nextButton = document.getElementById("next-btn");
+        nextButton.disabled = true;
+        nextButton.textContent = "Submitting…";
+        const submission = await saveResult(test.id, score, currentStudentName, currentAnswers, test.title);
+        const downloadButton = document.getElementById("download-response-btn");
+        if (downloadButton) downloadButton.disabled = !latestSubmissionRecord;
 
         document.getElementById("quiz-view").classList.add("hidden");
         document.getElementById("result-view").classList.remove("hidden");
@@ -1400,6 +1430,84 @@
         document.getElementById("res-score").innerHTML = `${score.toFixed(1)} <span>/ 10.0</span>`;
         const correctCount = Math.round(score / 0.5);
         document.getElementById("res-breakdown").textContent = `${correctCount} out of 20 questions correct (0.5 marks each)`;
+        const syncNote = document.getElementById("submission-status");
+        if (syncNote) {
+            syncNote.textContent = submission.sent
+                ? "Your submission request has been sent. Your teacher will check the Google Sheet."
+                : submission.reason === "not-configured"
+                    ? "This test is not connected to the teacher's Google Sheet yet. Please contact your teacher."
+                    : "Your answers could not be sent. Please tell your teacher before closing this page.";
+        }
+        nextButton.textContent = "Next Question →";
+    }
+
+    function downloadCurrentSubmission() {
+        if (!latestSubmissionRecord) {
+            alert("No submission is available to download yet.");
+            return;
+        }
+        const blob = new Blob([JSON.stringify(latestSubmissionRecord, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        const safeName = latestSubmissionRecord.studentName.replace(/[^a-z0-9_-]+/gi, "_").replace(/^_+|_+$/g, "") || "student";
+        link.href = url;
+        link.download = `${safeName}_${latestSubmissionRecord.testId}_response.json`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    }
+
+    async function importStudentRecords(event) {
+        const files = Array.from(event.target.files || []);
+        const existing = loadStudentRecords();
+        const ids = new Set(existing.map(r => r.submissionId).filter(Boolean));
+        let added = 0;
+        for (const file of files) {
+            try {
+                const record = JSON.parse(await file.text());
+                if (!record || !record.studentName || !Array.isArray(record.answers)) continue;
+                if (record.submissionId && ids.has(record.submissionId)) continue;
+                record.submissionId = record.submissionId || `import-${Date.now()}-${added}`;
+                existing.push(record);
+                ids.add(record.submissionId);
+                added++;
+            } catch (err) {
+                console.warn("Skipped an invalid student response file:", file.name, err);
+            }
+        }
+        try {
+            localStorage.setItem(RECORDS_KEY, JSON.stringify(existing));
+            renderTeacherRecords();
+            alert(`${added} student response file(s) imported.`);
+        } catch (err) {
+            alert("Could not save imported records in this browser. Storage may be full.");
+        }
+        event.target.value = "";
+    }
+
+    function exportAllRecords() {
+        const records = loadStudentRecords();
+        if (!records.length) {
+            alert("There are no student records to export yet.");
+            return;
+        }
+        const rows = [["Student Name", "Test", "Score", "Submitted At", "Question No.", "Topic", "Question", "Student Response", "Correct Answer", "Correct?"]];
+        records.forEach(record => (record.answers || []).forEach(answer => rows.push([
+            record.studentName, record.testTitle, record.score, record.timestamp,
+            answer.questionNumber, answer.topic, answer.question, answer.studentResponse,
+            answer.correctAnswer, answer.isCorrect ? "Yes" : "No"
+        ])));
+        const csv = rows.map(row => row.map(value => `"${String(value ?? "").replace(/"/g, '""')}"`).join(",")).join("\r\n");
+        const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `maths_student_responses_${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
     }
 
     function returnToDashboard() {
