@@ -618,21 +618,19 @@
         <div class="test-grid" id="test-cards-container"></div>
         <section id="teacher-records" class="teacher-records hidden">
             <h3 style="color:#fcd34d; margin-bottom:0.35rem;">🔒 Teacher-only student records</h3>
-            <p style="font-size:0.82rem;color:var(--text-muted);">Saved submissions on this browser, including each student's answers.</p>
-            <div id="records-list"></div>
+            <p style="font-size:0.82rem;color:var(--text-muted);">Cloud submissions from all students. Only the signed-in teacher account can read these records.</p>
+            <div id="records-list"><p style="margin-top:1rem;color:var(--text-muted);">Sign in to load submissions.</p></div>
             <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-top:1rem;">
+                <button class="teacher-btn" onclick="refreshTeacherRecords()">Refresh records</button>
                 <button class="teacher-btn" onclick="exportAllRecords()">Download all records (CSV)</button>
-                <button class="teacher-btn" onclick="document.getElementById('record-import').click()">Import student response files</button>
-                <input id="record-import" type="file" accept=".json,application/json" multiple style="display:none" onchange="importStudentRecords(event)">
                 <button class="teacher-btn" onclick="hideTeacherRecords()">Close records</button>
-                <button class="teacher-btn" onclick="resetAttempts()">Reset test attempts</button>
+                <button class="teacher-btn" onclick="teacherSignOut()">Sign out</button>
             </div>
-            <p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.8rem;">Students must download their response file after finishing and send it to you. Import those files here to collect them on your device.</p>
         </section>
 
         <div class="teacher-bar">
-            <span>🔒 Single-Attempt Lock Active (Scores saved per browser)</span>
-            <button class="teacher-btn" onclick="openTeacherModal()">🔑 Teacher / Head Reset</button>
+            <span>☁️ Student submissions are saved to the online class database</span>
+            <button class="teacher-btn" onclick="openTeacherModal()">🔐 Teacher Login</button>
         </div>
     </div>
 
@@ -681,27 +679,31 @@
             </div>
 
             <div style="display:flex;gap:0.75rem;flex-wrap:wrap;justify-content:center;">
-                <!-- <button class="btn" id="download-response-btn" onclick="downloadCurrentSubmission()">Download my response file</button> -->
+                <button class="btn" id="download-response-btn" onclick="downloadCurrentSubmission()">Download my response file</button>
                 <button class="btn" onclick="returnToDashboard()">Return to Arcade Menu</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- TEACHER RESET MODAL -->
+<!-- TEACHER SIGN-IN MODAL -->
 <div id="teacher-modal" class="modal-backdrop hidden">
     <div class="modal-card">
-        <h3 style="margin-bottom: 0.5rem; color: #fff;">Teacher / Head Override</h3>
-        <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">Enter Teacher PIN to unlock and reset all test attempts on this device.</p>
-        <input type="password" id="teacher-pin" class="math-input" style="width: 140px; font-size: 1.2rem; margin-bottom: 1rem;" placeholder="PIN" maxlength="4">
-        <div id="pin-error" style="color: var(--danger); font-size: 0.8rem; margin-bottom: 0.75rem;" class="hidden">Incorrect PIN.</div>
+        <h3 style="margin-bottom: 0.5rem; color: #fff;">Teacher Sign In</h3>
+        <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">Use the teacher email and password created in Firebase Authentication.</p>
+        <input type="email" id="teacher-email" class="math-input" style="width:100%;font-size:1rem;margin-bottom:0.75rem;" placeholder="Teacher email" autocomplete="username">
+        <input type="password" id="teacher-password" class="math-input" style="width:100%;font-size:1rem;margin-bottom:1rem;" placeholder="Teacher password" autocomplete="current-password">
+        <div id="pin-error" style="color: var(--danger); font-size: 0.8rem; margin-bottom: 0.75rem;" class="hidden">Sign in failed. Check your details.</div>
         <div style="display: flex; gap: 0.75rem; justify-content: center;">
             <button class="teacher-btn" style="padding: 0.6rem 1rem;" onclick="closeTeacherModal()">Cancel</button>
-            <button class="btn btn-success" style="padding: 0.6rem 1.2rem;" onclick="verifyAndReset()">View Records</button>
+            <button class="btn btn-success" style="padding: 0.6rem 1.2rem;" onclick="teacherSignIn()">Sign in and view results</button>
         </div>
     </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
     /**
      * TEST DATA CONFIGURATION
@@ -1107,9 +1109,35 @@
 
     // State Management
     const STORAGE_KEY = "maths_arcade_10m_v1";
-    const RECORDS_KEY = "maths_arcade_student_records_v1";
-    // Paste your deployed Google Apps Script Web App URL between the quotes below.
-    const GOOGLE_SCRIPT_URL = "PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
+    const RECORDS_KEY = "maths_arcade_student_records_v1"; // local emergency backup only
+
+    // STEP 1: Replace these placeholder values with the Firebase web-app config
+    // from Firebase Console > Project settings > Your apps > SDK setup and configuration.
+    const FIREBASE_CONFIG = {
+        apiKey: "AIzaSyDqXs4LtTUhXXBiK26gNszHPRqmZ-FgWhY",
+        authDomain: "maths-mini-test.firebaseapp.com",
+        projectId: "maths-mini-test",
+        storageBucket: "maths-mini-test.firebasestorage.app",
+        messagingSenderId: "437217736528",
+        appId: "1:437217736528:web:e8d0e2ce0f6e0386155e55"
+    };
+    let firebaseReady = false;
+    let firebaseApp = null;
+    let firebaseAuth = null;
+    let firebaseDb = null;
+    let cloudRecords = [];
+    try {
+        const configured = FIREBASE_CONFIG.apiKey !== "PASTE_API_KEY_HERE" &&
+            FIREBASE_CONFIG.projectId !== "PASTE_PROJECT_ID" && FIREBASE_CONFIG.appId !== "PASTE_APP_ID";
+        if (configured && window.firebase) {
+            firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
+            firebaseAuth = firebase.auth();
+            firebaseDb = firebase.firestore();
+            firebaseReady = true;
+        }
+    } catch (firebaseInitError) {
+        console.error("Firebase initialization failed:", firebaseInitError);
+    }
     let currentStudentName = "";
     let currentAnswers = [];
     let currentTestIdx = null;
@@ -1142,32 +1170,23 @@
         const record = { submissionId: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`, studentName, testId, testTitle, score: finalScore, timestamp, answers };
         latestSubmissionRecord = record;
 
-        // Keep a local copy as a backup on this student's browser.
+        // Keep the attempt lock and a backup on this student's browser.
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(results));
-            const records = loadStudentRecords();
-            records.push(record);
-            localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
+            const localRecords = loadStudentRecords();
+            localRecords.push(record);
+            localStorage.setItem(RECORDS_KEY, JSON.stringify(localRecords));
         } catch (e) {
             console.warn("Could not save the local backup:", e);
         }
 
-        if (!GOOGLE_SCRIPT_URL.startsWith("https://script.google.com/macros/s/")) {
-            return { sent: false, reason: "not-configured" };
-        }
-
+        if (!firebaseReady || !firebaseDb) return { sent: false, reason: "not-configured" };
         try {
-            // text/plain + no-cors allows the browser to send the submission to Apps Script.
-            // The response is opaque, so this confirms dispatch, not database receipt.
-            await fetch(GOOGLE_SCRIPT_URL, {
-                method: "POST",
-                mode: "no-cors",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify(record)
-            });
+            // Firestore rules allow students to create submissions but never read them.
+            await firebaseDb.collection("submissions").add(record);
             return { sent: true };
         } catch (error) {
-            console.error("Google Sheets submission failed:", error);
+            console.error("Cloud submission failed:", error);
             return { sent: false, reason: "network-error" };
         }
     }
@@ -1433,10 +1452,10 @@
         const syncNote = document.getElementById("submission-status");
         if (syncNote) {
             syncNote.textContent = submission.sent
-                ? "Your submission request has been sent. Your teacher will check the Google Sheet."
+                ? "Your answers have been saved securely online. Your teacher can view them from the teacher dashboard."
                 : submission.reason === "not-configured"
-                    ? "This test is not connected to the teacher's Google Sheet yet. Please contact your teacher."
-                    : "Your answers could not be sent. Please tell your teacher before closing this page.";
+                    ? "This test is not connected to the class database yet. Please contact your teacher before closing this page."
+                    : "Your answers could not be sent to the class database. Please check your internet connection and tell your teacher.";
         }
         nextButton.textContent = "Next Question →";
     }
@@ -1458,38 +1477,27 @@
         URL.revokeObjectURL(url);
     }
 
-    async function importStudentRecords(event) {
-        const files = Array.from(event.target.files || []);
-        const existing = loadStudentRecords();
-        const ids = new Set(existing.map(r => r.submissionId).filter(Boolean));
-        let added = 0;
-        for (const file of files) {
-            try {
-                const record = JSON.parse(await file.text());
-                if (!record || !record.studentName || !Array.isArray(record.answers)) continue;
-                if (record.submissionId && ids.has(record.submissionId)) continue;
-                record.submissionId = record.submissionId || `import-${Date.now()}-${added}`;
-                existing.push(record);
-                ids.add(record.submissionId);
-                added++;
-            } catch (err) {
-                console.warn("Skipped an invalid student response file:", file.name, err);
-            }
+    async function refreshTeacherRecords() {
+        const container = document.getElementById("records-list");
+        if (!firebaseReady || !firebaseDb || !firebaseAuth || !firebaseAuth.currentUser) {
+            container.innerHTML = '<p style="margin-top:1rem;color:var(--text-muted);">Please sign in with the teacher account to view records.</p>';
+            return;
         }
+        container.innerHTML = '<p style="margin-top:1rem;color:var(--text-muted);">Loading cloud submissions…</p>';
         try {
-            localStorage.setItem(RECORDS_KEY, JSON.stringify(existing));
-            renderTeacherRecords();
-            alert(`${added} student response file(s) imported.`);
-        } catch (err) {
-            alert("Could not save imported records in this browser. Storage may be full.");
+            const snapshot = await firebaseDb.collection("submissions").orderBy("timestamp", "desc").get();
+            cloudRecords = snapshot.docs.map(doc => ({ ...doc.data(), cloudId: doc.id }));
+            renderTeacherRecords(cloudRecords);
+        } catch (error) {
+            console.error("Could not load teacher records:", error);
+            container.innerHTML = '<p style="margin-top:1rem;color:#fca5a5;">Could not load records. Check that Firestore rules allow your signed-in teacher account to read submissions.</p>';
         }
-        event.target.value = "";
     }
 
     function exportAllRecords() {
-        const records = loadStudentRecords();
+        const records = cloudRecords || [];
         if (!records.length) {
-            alert("There are no student records to export yet.");
+            alert("There are no cloud submissions loaded. Sign in and refresh records first.");
             return;
         }
         const rows = [["Student Name", "Test", "Score", "Submitted At", "Question No.", "Topic", "Question", "Student Response", "Correct Answer", "Correct?"]];
@@ -1517,9 +1525,10 @@
         renderDashboard();
     }
 
-    // Teacher Reset Modal Controls
+    // Teacher account controls: Firebase Authentication replaces the old visible PIN.
     function openTeacherModal() {
-        document.getElementById("teacher-pin").value = "";
+        document.getElementById("teacher-email").value = "";
+        document.getElementById("teacher-password").value = "";
         document.getElementById("pin-error").classList.add("hidden");
         document.getElementById("teacher-modal").classList.remove("hidden");
     }
@@ -1528,20 +1537,37 @@
         document.getElementById("teacher-modal").classList.add("hidden");
     }
 
-    function verifyAndReset() {
-        const pin = document.getElementById("teacher-pin").value;
-        if (pin === "1234") {
+    async function teacherSignIn() {
+        const errorBox = document.getElementById("pin-error");
+        errorBox.classList.add("hidden");
+        if (!firebaseReady || !firebaseAuth) {
+            errorBox.textContent = "Firebase is not configured yet. Complete the setup instructions first.";
+            errorBox.classList.remove("hidden");
+            return;
+        }
+        const email = document.getElementById("teacher-email").value.trim();
+        const password = document.getElementById("teacher-password").value;
+        try {
+            await firebaseAuth.signInWithEmailAndPassword(email, password);
             closeTeacherModal();
-            renderTeacherRecords();
             document.getElementById("teacher-records").classList.remove("hidden");
+            await refreshTeacherRecords();
             document.getElementById("teacher-records").scrollIntoView({ behavior: "smooth" });
-        } else {
-            document.getElementById("pin-error").classList.remove("hidden");
+        } catch (error) {
+            console.error("Teacher sign-in failed:", error);
+            errorBox.textContent = "Sign in failed. Check the teacher email/password and confirm Email/Password sign-in is enabled.";
+            errorBox.classList.remove("hidden");
         }
     }
 
-    function renderTeacherRecords() {
-        const records = loadStudentRecords();
+    async function teacherSignOut() {
+        if (firebaseAuth) await firebaseAuth.signOut();
+        cloudRecords = [];
+        hideTeacherRecords();
+        alert("Teacher account signed out.");
+    }
+
+    function renderTeacherRecords(records = cloudRecords) {
         const container = document.getElementById("records-list");
         if (!records.length) {
             container.innerHTML = '<p style="margin-top:1rem;color:var(--text-muted);">No student submissions have been recorded yet.</p>';
@@ -1588,8 +1614,7 @@
         if (!confirm("Reset the single-attempt locks for this browser? Saved student records will be kept.")) return;
         localStorage.removeItem(STORAGE_KEY);
         renderDashboard();
-        renderTeacherRecords();
-        alert("Test attempts have been reset. Existing student records are still saved.");
+        alert("The attempt lock on this browser has been reset. Cloud submissions are unchanged.");
     }
 
     // Boot
