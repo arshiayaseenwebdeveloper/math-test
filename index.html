@@ -613,7 +613,13 @@
     <div id="dashboard-view">
         <div class="student-entry">
             <label for="student-name">Student name</label>
-            <input type="text" id="student-name" maxlength="80" placeholder="Enter your full name" autocomplete="name">
+            <input type="text" id="student-name" maxlength="80" placeholder="Enter your full name" autocomplete="name" required>
+            <label for="student-class" style="margin-top:0.9rem;">Class</label>
+            <input type="text" id="student-class" maxlength="30" placeholder="Enter your class (e.g. 8)" required>
+            <label for="student-section" style="margin-top:0.9rem;">Section</label>
+            <input type="text" id="student-section" maxlength="20" placeholder="Enter your section (e.g. A)" required>
+            <label for="student-gr" style="margin-top:0.9rem;">GR Number</label>
+            <input type="text" id="student-gr" maxlength="40" placeholder="Enter your GR number" autocomplete="off" required>
         </div>
         <div class="test-grid" id="test-cards-container"></div>
         <section id="teacher-records" class="teacher-records hidden">
@@ -1139,6 +1145,9 @@
         console.error("Firebase initialization failed:", firebaseInitError);
     }
     let currentStudentName = "";
+    let currentStudentClass = "";
+    let currentStudentSection = "";
+    let currentStudentGR = "";
     let currentAnswers = [];
     let currentTestIdx = null;
     let currentQIdx = 0;
@@ -1163,11 +1172,15 @@
         }
     }
 
-    async function saveResult(testId, finalScore, studentName, answers, testTitle) {
+    async function saveResult(testId, finalScore, studentName, studentClass, studentSection, grNumber, answers, testTitle) {
         const results = loadResults();
         const timestamp = new Date().toISOString();
         results[testId] = { score: finalScore, timestamp };
-        const record = { submissionId: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`, studentName, testId, testTitle, score: finalScore, timestamp, answers };
+        const record = {
+            submissionId: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+            studentName, studentClass, studentSection, grNumber,
+            testId, testTitle, score: finalScore, timestamp, answers
+        };
         latestSubmissionRecord = record;
 
         // Keep the attempt lock and a backup on this student's browser.
@@ -1228,14 +1241,28 @@
         const results = loadResults();
         const test = TESTS[index];
         const enteredName = document.getElementById("student-name").value.trim();
-        if (!enteredName) {
-            alert("Please enter the student's name before starting a test.");
-            document.getElementById("student-name").focus();
+        const enteredClass = document.getElementById("student-class").value.trim();
+        const enteredSection = document.getElementById("student-section").value.trim();
+        const enteredGR = document.getElementById("student-gr").value.trim();
+
+        const requiredFields = [
+            ["student-name", enteredName, "student name"],
+            ["student-class", enteredClass, "class"],
+            ["student-section", enteredSection, "section"],
+            ["student-gr", enteredGR, "GR number"]
+        ];
+        const missingField = requiredFields.find(field => !field[1]);
+        if (missingField) {
+            alert(`Please enter the student's ${missingField[2]} before starting a test.`);
+            document.getElementById(missingField[0]).focus();
             return;
         }
         if (results[test.id] !== undefined) return;
 
         currentStudentName = enteredName;
+        currentStudentClass = enteredClass;
+        currentStudentSection = enteredSection;
+        currentStudentGR = enteredGR;
         currentAnswers = [];
         currentTestIdx = index;
         currentQIdx = 0;
@@ -1438,7 +1465,10 @@
         const nextButton = document.getElementById("next-btn");
         nextButton.disabled = true;
         nextButton.textContent = "Submitting…";
-        const submission = await saveResult(test.id, score, currentStudentName, currentAnswers, test.title);
+        const submission = await saveResult(
+            test.id, score, currentStudentName, currentStudentClass,
+            currentStudentSection, currentStudentGR, currentAnswers, test.title
+        );
         const downloadButton = document.getElementById("download-response-btn");
         if (downloadButton) downloadButton.disabled = !latestSubmissionRecord;
 
@@ -1500,9 +1530,10 @@
             alert("There are no cloud submissions loaded. Sign in and refresh records first.");
             return;
         }
-        const rows = [["Student Name", "Test", "Score", "Submitted At", "Question No.", "Topic", "Question", "Student Response", "Correct Answer", "Correct?"]];
+        const rows = [["Student Name", "Class", "Section", "GR Number", "Test", "Score", "Submitted At", "Question No.", "Topic", "Question", "Student Response", "Correct Answer", "Correct?"]];
         records.forEach(record => (record.answers || []).forEach(answer => rows.push([
-            record.studentName, record.testTitle, record.score, record.timestamp,
+            record.studentName, record.studentClass || "", record.studentSection || "", record.grNumber || "",
+            record.testTitle, record.score, record.timestamp,
             answer.questionNumber, answer.topic, answer.question, answer.studentResponse,
             answer.correctAnswer, answer.isCorrect ? "Yes" : "No"
         ])));
@@ -1589,6 +1620,9 @@
                 <article class="record-card">
                     <h4>${escapeHTML(record.studentName)} — ${escapeHTML(record.testTitle)}</h4>
                     <p style="font-size:0.82rem;color:var(--text-muted);">
+                        Class: ${escapeHTML(record.studentClass || "Not recorded")} ·
+                        Section: ${escapeHTML(record.studentSection || "Not recorded")} ·
+                        GR Number: ${escapeHTML(record.grNumber || "Not recorded")}<br>
                         Score: ${Number(record.score).toFixed(1)} / 10 · ${escapeHTML(record.timestamp)}
                     </p>
                     <details style="margin-top:0.7rem;">
