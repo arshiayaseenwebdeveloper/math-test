@@ -1629,9 +1629,38 @@
                         <summary style="cursor:pointer;color:#67e8f9;">View all student responses</summary>
                         <div style="margin-top:0.6rem;">${answerRows}</div>
                     </details>
+                    <div style="display:flex;justify-content:flex-end;margin-top:0.85rem;">
+                        <button class="teacher-btn" style="border-color:#ef4444;color:#fecaca;" onclick="deleteTeacherRecord('${escapeHTML(record.cloudId || "")}')" ${record.cloudId ? "" : "disabled"}>
+                            Delete submission
+                        </button>
+                    </div>
                 </article>
             `;
         }).join("");
+    }
+
+    async function deleteTeacherRecord(cloudId) {
+        if (!firebaseReady || !firebaseDb || !firebaseAuth || !firebaseAuth.currentUser) {
+            alert("Please sign in with the teacher account before deleting a submission.");
+            return;
+        }
+        if (!cloudId) {
+            alert("This submission does not have a cloud record ID, so it cannot be deleted here.");
+            return;
+        }
+        const record = cloudRecords.find(item => item.cloudId === cloudId);
+        const studentLabel = record ? `${record.studentName} — ${record.testTitle}` : "this submission";
+        if (!confirm(`Are you sure you want to permanently delete ${studentLabel}? This cannot be undone.`)) return;
+
+        try {
+            await firebaseDb.collection("submissions").doc(cloudId).delete();
+            cloudRecords = cloudRecords.filter(item => item.cloudId !== cloudId);
+            renderTeacherRecords(cloudRecords);
+            alert("The submission has been deleted from the online class records.");
+        } catch (error) {
+            console.error("Could not delete submission:", error);
+            alert("The submission could not be deleted. Check your Firestore security rules allow the signed-in teacher to delete submissions.");
+        }
     }
 
     function escapeHTML(value) {
