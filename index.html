@@ -1204,6 +1204,13 @@
         }
     }
 
+    function getTestAttemptCount(testId) {
+        const records = loadStudentRecords();
+        const savedCount = records.filter(record => record && record.testId === testId).length;
+        // Older browsers may have a saved score but no detailed local backup.
+        return Math.max(savedCount, loadResults()[testId] !== undefined ? 1 : 0);
+    }
+
     function renderDashboard() {
         const results = loadResults();
         const container = document.getElementById("test-cards-container");
@@ -1211,9 +1218,11 @@
 
         TESTS.forEach((test, index) => {
             const record = results[test.id];
-            // Test 2 is intentionally repeatable so every student can reattempt it.
-            const canReattempt = test.id === "test_2";
-            const isLocked = record !== undefined && !canReattempt;
+            // Test 2 gets one additional attempt: two attempts total.
+            const isTest2 = test.id === "test_2";
+            const attemptCount = isTest2 ? getTestAttemptCount(test.id) : (record !== undefined ? 1 : 0);
+            const isLocked = attemptCount >= (isTest2 ? 2 : 1);
+            const canReattempt = isTest2 && attemptCount === 1;
 
             const card = document.createElement("div");
             card.className = `test-card ${isLocked ? "locked" : ""}`;
@@ -1228,10 +1237,10 @@
                 </div>
                 <div class="card-footer">
                     <span class="status-text ${isLocked ? "status-done" : "status-open"}">
-                        ${isLocked ? `✓ Score: ${record.score.toFixed(1)} / 10.0` : (canReattempt && record ? `Previous score: ${record.score.toFixed(1)} / 10.0 • Re-attempt available` : "Status: Ready (1 Attempt)")}
+                        ${isLocked ? `✓ Completed • ${isTest2 ? "2 attempts used" : `Score: ${record.score.toFixed(1)} / 10.0`}` : (canReattempt && record ? `Previous score: ${record.score.toFixed(1)} / 10.0 • 1 re-attempt available` : "Status: Ready (1 Attempt)")}
                     </span>
                     <button class="btn" onclick="startTest(${index})" ${isLocked ? "disabled" : ""}>
-                        ${isLocked ? "Locked" : (canReattempt && record ? "Re-attempt Test →" : "Launch Test →")}
+                        ${isLocked ? "Locked" : (canReattempt ? "Use One Re-attempt →" : "Launch Test →")}
                     </button>
                 </div>
             `;
@@ -1259,8 +1268,13 @@
             document.getElementById(missingField[0]).focus();
             return;
         }
-        // Keep Test 1 single-attempt, but allow students to repeat Test 2.
-        if (results[test.id] !== undefined && test.id !== "test_2") return;
+        // Test 1 allows one attempt; Test 2 allows two attempts total.
+        const attemptLimit = test.id === "test_2" ? 2 : 1;
+        if (getTestAttemptCount(test.id) >= attemptLimit) {
+            alert(test.id === "test_2" ? "You have used both attempts for Test 2." : "This test has already been completed.");
+            renderDashboard();
+            return;
+        }
 
         currentStudentName = enteredName;
         currentStudentClass = enteredClass;
