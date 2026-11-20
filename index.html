@@ -1417,6 +1417,15 @@
         return String(val).replace(/\s+/g, "").toLowerCase();
     }
 
+    // Accept a numerical answer with an optional measurement unit, e.g.
+    // "10", "10 cm", "50 cm²", or "120 cm^3".
+    function parseNumericAnswerWithUnit(value) {
+        const match = String(value).trim().match(
+            /^(-?(?:\d+(?:\.\d*)?|\.\d+))\s*(cm(?:\s*(?:²|³|\^2|\^3|2|3))?|mm(?:\s*(?:²|³|\^2|\^3|2|3))?|m(?:\s*(?:²|³|\^2|\^3|2|3))?|km(?:\s*(?:²|³|\^2|\^3|2|3))?|degrees?|deg|°)?$/i
+        );
+        return match ? Number(match[1]) : NaN;
+    }
+
     function submitAndNext() {
         if (userSelection === null || userSelection === "") return;
 
@@ -1427,10 +1436,11 @@
         if (q.type === "sort") {
             isCorrect = (Number(userSelection) === q.answer);
         } else if (q.type === "input") {
-            // Compare numerical values if both parse as numbers (handles 1.25 vs 1.250)
-            const numUser = parseFloat(userSelection);
-            const numAns = parseFloat(q.answer);
-            if (!isNaN(numUser) && !isNaN(numAns) && String(userSelection).match(/^-?\d+(\.\d+)?$/)) {
+            // Compare numerical values while allowing an optional unit after the number.
+            // Examples: 10 cm, 34 cm, 50 cm², and 120 cm³.
+            const numUser = parseNumericAnswerWithUnit(userSelection);
+            const numAns = parseNumericAnswerWithUnit(q.answer);
+            if (!Number.isNaN(numUser) && !Number.isNaN(numAns)) {
                 isCorrect = Math.abs(numUser - numAns) < 1e-6;
             } else {
                 isCorrect = normalizeAnswer(userSelection) === normalizeAnswer(q.answer);
