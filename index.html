@@ -1211,7 +1211,9 @@
 
         TESTS.forEach((test, index) => {
             const record = results[test.id];
-            const isLocked = record !== undefined;
+            // Test 2 is intentionally repeatable so every student can reattempt it.
+            const canReattempt = test.id === "test_2";
+            const isLocked = record !== undefined && !canReattempt;
 
             const card = document.createElement("div");
             card.className = `test-card ${isLocked ? "locked" : ""}`;
@@ -1226,10 +1228,10 @@
                 </div>
                 <div class="card-footer">
                     <span class="status-text ${isLocked ? "status-done" : "status-open"}">
-                        ${isLocked ? `✓ Score: ${record.score.toFixed(1)} / 10.0` : "Status: Ready (1 Attempt)"}
+                        ${isLocked ? `✓ Score: ${record.score.toFixed(1)} / 10.0` : (canReattempt && record ? `Previous score: ${record.score.toFixed(1)} / 10.0 • Re-attempt available` : "Status: Ready (1 Attempt)")}
                     </span>
                     <button class="btn" onclick="startTest(${index})" ${isLocked ? "disabled" : ""}>
-                        ${isLocked ? "Locked" : "Launch Test →"}
+                        ${isLocked ? "Locked" : (canReattempt && record ? "Re-attempt Test →" : "Launch Test →")}
                     </button>
                 </div>
             `;
@@ -1257,7 +1259,8 @@
             document.getElementById(missingField[0]).focus();
             return;
         }
-        if (results[test.id] !== undefined) return;
+        // Keep Test 1 single-attempt, but allow students to repeat Test 2.
+        if (results[test.id] !== undefined && test.id !== "test_2") return;
 
         currentStudentName = enteredName;
         currentStudentClass = enteredClass;
